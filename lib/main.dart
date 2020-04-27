@@ -1,78 +1,121 @@
+// Flutter code sample for Flow
+
+// This example uses the [Flow] widget to create a menu that opens and closes
+// as it is interacted with, shown above. The color of the button in the menu
+// changes to indicate which one has been selected.
+
 import 'package:flutter/material.dart';
 
-class MyAppBar extends StatelessWidget {
-  MyAppBar({this.title});
+void main() => runApp(FlowApp());
 
-  // Fields in a Widget subclass are always marked "final".
+class FlowApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Flow Example'),
+        ),
+        body: FlowMenu(),
+      ),
+    );
+  }
+}
 
-  final Widget title;
+class FlowMenu extends StatefulWidget {
+  @override
+  _FlowMenuState createState() => _FlowMenuState();
+}
+
+class _FlowMenuState extends State<FlowMenu>
+    with SingleTickerProviderStateMixin {
+  AnimationController menuAnimation;
+  IconData lastTapped = Icons.notifications;
+  final List<IconData> menuItems = <IconData>[
+    Icons.home,
+    Icons.new_releases,
+    Icons.notifications,
+    Icons.settings,
+    Icons.menu,
+  ];
+
+  void _updateMenu(IconData icon) {
+    if (icon != Icons.menu) setState(() => lastTapped = icon);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    menuAnimation = AnimationController(
+      duration: const Duration(milliseconds: 250),
+      vsync: this,
+    );
+  }
+
+  Widget flowMenuItem(IconData icon) {
+    final double buttonDiameter =
+        MediaQuery.of(context).size.width / menuItems.length;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: RawMaterialButton(
+        fillColor: lastTapped == icon ? Colors.amber[700] : Colors.blue,
+        splashColor: Colors.amber[100],
+        shape: CircleBorder(),
+        constraints: BoxConstraints.tight(Size(buttonDiameter, buttonDiameter)),
+        onPressed: () {
+          _updateMenu(icon);
+          menuAnimation.status == AnimationStatus.completed
+              ? menuAnimation.reverse()
+              : menuAnimation.forward();
+        },
+        child: Icon(
+          icon,
+          color: Colors.white,
+          size: 45.0,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 56.0, // in logical pixels
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      decoration: BoxDecoration(color: Colors.blue[500]),
-      // Row is a horizontal, linear layout.
-      child: Row(
-        // <Widget> is the type of items in the list.
-        children: <Widget>[
-          IconButton(
-            icon: Icon(Icons.menu),
-            tooltip: 'Navigation menu',
-            onPressed: null, // null disables the button
-          ),
-          // Expanded expands its child to fill the available space.
-          Expanded(
-            child: title,
-          ),
-          IconButton(
-            icon: Icon(Icons.search),
-            tooltip: 'Search',
-            onPressed: null,
-          ),
-        ],
+      child: Flow(
+        delegate: FlowMenuDelegate(menuAnimation: menuAnimation),
+        children: menuItems
+            .map<Widget>((IconData icon) => flowMenuItem(icon))
+            .toList(),
       ),
     );
   }
 }
 
-class MyScaffold extends StatelessWidget {
+class FlowMenuDelegate extends FlowDelegate {
+  FlowMenuDelegate({this.menuAnimation}) : super(repaint: menuAnimation);
+
+  final Animation<double> menuAnimation;
+
   @override
-  Widget build(BuildContext context) {
-    // Material is a conceptual piece of paper on which the UI appears.
-    return Material(
-      // Column is a vertical, linear layout.
-      child: Column(
-        children: <Widget>[
-          MyAppBar(
-            title: Text(
-              'Example title',
-              style: Theme.of(context).primaryTextTheme.title,
-            ),
-          ),
-          Text('Deliver features faster'),
-          Text('Craft beautiful UIs'),
-          Expanded(
-            child: FittedBox(
-              fit: BoxFit.contain, // otherwise the logo will be tiny
-              child: const FlutterLogo(),
-            ),
-          ),
-        ],
-      ),
-    );
+  bool shouldRepaint(FlowMenuDelegate oldDelegate) {
+    return menuAnimation != oldDelegate.menuAnimation;
+  }
+
+  @override
+  void paintChildren(FlowPaintingContext context) {
+    double dx = 0.0;
+    for (int i = 0; i < context.childCount; ++i) {
+      dx = context.getChildSize(i).width * i;
+      context.paintChild(
+        i,
+        transform: Matrix4.translationValues(
+          dx * menuAnimation.value,
+          0,
+          0,
+        ),
+      );
+    }
   }
 }
-
-void main() {
-  runApp(MaterialApp(
-    title: 'My app', // used by the OS task switcher
-    home: MyScaffold(),
-  ));
-}
-
-
 
 
 
